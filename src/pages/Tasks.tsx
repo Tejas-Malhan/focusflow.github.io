@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Task {
   id: number;
@@ -21,6 +22,7 @@ export default function Tasks() {
     if (newTask.trim()) {
       setTasks([...tasks, { id: Date.now(), title: newTask, completed: false }]);
       setNewTask("");
+      toast.success("Task added successfully");
     }
   };
 
@@ -28,6 +30,15 @@ export default function Tasks() {
     setTasks(tasks.map(task =>
       task.id === id ? { ...task, completed: !task.completed } : task
     ));
+  };
+
+  const clearAllTasks = () => {
+    if (tasks.length === 0) {
+      toast.info("No tasks to clear");
+      return;
+    }
+    setTasks([]);
+    toast.success("All tasks cleared");
   };
 
   return (
@@ -70,6 +81,15 @@ export default function Tasks() {
               </div>
             ))}
           </div>
+
+          {tasks.length > 0 && (
+            <div className="mt-6 flex justify-end">
+              <Button variant="destructive" onClick={clearAllTasks}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All Tasks
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     </Layout>

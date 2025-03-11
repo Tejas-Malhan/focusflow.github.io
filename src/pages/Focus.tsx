@@ -1,13 +1,61 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Focus() {
   const [isRunning, setIsRunning] = useState(false);
   const [time, setTime] = useState(25 * 60); // 25 minutes in seconds
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isRunning && time > 0) {
+      intervalRef.current = window.setInterval(() => {
+        setTime(prevTime => {
+          if (prevTime <= 1) {
+            clearInterval(intervalRef.current!);
+            setIsRunning(false);
+            toast.success("Focus session completed!");
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+    } else if (!isRunning && intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isRunning, time]);
+
+  const handleStartPause = () => {
+    if (time === 0) {
+      resetTimer();
+    }
+    setIsRunning(!isRunning);
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    setTime(25 * 60);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    toast.info("Timer reset");
+  };
+
+  const formatTime = (timeInSeconds: number) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <Layout>
@@ -22,26 +70,38 @@ export default function Focus() {
         <Card className="p-8 max-w-md mx-auto text-center">
           <div className="space-y-8">
             <div className="text-6xl font-bold">
-              {Math.floor(time / 60)}:{String(time % 60).padStart(2, '0')}
+              {formatTime(time)}
             </div>
             
-            <Button
-              size="lg"
-              onClick={() => setIsRunning(!isRunning)}
-              className="w-full"
-            >
-              {isRunning ? (
-                <>
-                  <Pause className="mr-2 h-5 w-5" />
-                  Pause
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-5 w-5" />
-                  Start Focus Session
-                </>
-              )}
-            </Button>
+            <div className="flex flex-col gap-4">
+              <Button
+                size="lg"
+                onClick={handleStartPause}
+                className="w-full"
+              >
+                {isRunning ? (
+                  <>
+                    <Pause className="mr-2 h-5 w-5" />
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5" />
+                    {time === 0 ? "Start New Session" : "Start Focus Session"}
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={resetTimer}
+                className="w-full"
+              >
+                <RotateCcw className="mr-2 h-5 w-5" />
+                Reset Timer
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
