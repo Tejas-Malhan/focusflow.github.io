@@ -1,14 +1,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Play, Pause, RotateCcw, Music, CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Focus() {
   const [isRunning, setIsRunning] = useState(false);
   const [time, setTime] = useState(25 * 60); // 25 minutes in seconds
+  const [spotifyUrl, setSpotifyUrl] = useState("");
+  const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -55,6 +58,19 @@ export default function Focus() {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = timeInSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleSpotifySubmit = () => {
+    if (spotifyUrl.trim() && spotifyUrl.includes('spotify')) {
+      toast.success("Spotify playlist connected");
+      setShowSpotifyInput(false);
+    } else {
+      toast.error("Please enter a valid Spotify URL");
+    }
+  };
+
+  const openCalendar = () => {
+    toast.info("Google Calendar integration coming soon");
   };
 
   return (
@@ -104,6 +120,73 @@ export default function Focus() {
             </div>
           </div>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center">
+                <Music className="mr-2 h-5 w-5" />
+                Spotify Music
+              </h2>
+              
+              {showSpotifyInput ? (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Enter Spotify playlist URL"
+                    value={spotifyUrl}
+                    onChange={(e) => setSpotifyUrl(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSpotifySubmit} className="flex-1">
+                      Connect
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowSpotifyInput(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {spotifyUrl ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Playlist connected! Add an embed player here in production.
+                      </p>
+                      <Button onClick={() => setShowSpotifyInput(true)}>
+                        Change Playlist
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button onClick={() => setShowSpotifyInput(true)}>
+                      Connect Spotify Playlist
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center">
+                <CalendarRange className="mr-2 h-5 w-5" />
+                Google Calendar
+              </h2>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Connect your Google Calendar to sync your focus sessions and tasks.
+                </p>
+                <Button onClick={openCalendar}>
+                  Connect Google Calendar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );
