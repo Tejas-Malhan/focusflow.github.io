@@ -4,29 +4,64 @@ import { Layout } from "@/components/layout/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
+
+interface CalendarEvent {
+  id: number;
+  title: string;
+  date: string;
+  time?: string;
+  description?: string;
+}
 
 export default function Calendar() {
   const [isConnected, setIsConnected] = useState(false);
-  const [events, setEvents] = useState<{ id: number; title: string; date: string }[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [newEvent, setNewEvent] = useState("");
   const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("");
+  const [newDescription, setNewDescription] = useState("");
 
   const connectCalendar = () => {
+    // In a real implementation, this would handle OAuth flow with Google Calendar API
     setIsConnected(true);
     toast.success("Connected to Google Calendar");
   };
 
   const addEvent = () => {
     if (newEvent.trim() && newDate.trim()) {
-      setEvents([...events, { id: Date.now(), title: newEvent, date: newDate }]);
+      const event: CalendarEvent = { 
+        id: Date.now(), 
+        title: newEvent, 
+        date: newDate,
+        time: newTime || undefined,
+        description: newDescription || undefined
+      };
+      
+      setEvents([...events, event]);
       setNewEvent("");
       setNewDate("");
+      setNewTime("");
+      setNewDescription("");
       toast.success("Event added to calendar");
     } else {
       toast.error("Please enter both event title and date");
     }
+  };
+
+  const removeEvent = (id: number) => {
+    setEvents(events.filter(event => event.id !== id));
+    toast.success("Event removed from calendar");
+  };
+
+  const clearAllEvents = () => {
+    if (events.length === 0) {
+      toast.info("No events to clear");
+      return;
+    }
+    setEvents([]);
+    toast.success("All events cleared");
   };
 
   return (
@@ -66,6 +101,17 @@ export default function Calendar() {
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
                   />
+                  <Input
+                    type="time"
+                    placeholder="Time (optional)"
+                    value={newTime}
+                    onChange={(e) => setNewTime(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Description (optional)"
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                  />
                 </div>
                 <Button onClick={addEvent}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -75,19 +121,45 @@ export default function Calendar() {
             </Card>
 
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Upcoming Events</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Upcoming Events</h2>
+                {events.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={clearAllEvents}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+              
               {events.length === 0 ? (
                 <p className="text-muted-foreground">No events scheduled yet.</p>
               ) : (
                 <div className="space-y-4">
                   {events.map(event => (
-                    <div key={event.id} className="flex justify-between items-center p-3 border rounded-md">
+                    <div key={event.id} className="flex justify-between items-center p-4 border rounded-md group hover:bg-accent/50">
                       <div>
                         <p className="font-medium">{event.title}</p>
-                        <p className="text-sm text-muted-foreground">{event.date}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CalendarIcon className="h-3 w-3" />
+                          <span>{event.date}</span>
+                          {event.time && (
+                            <>
+                              <Clock className="h-3 w-3 ml-2" />
+                              <span>{event.time}</span>
+                            </>
+                          )}
+                        </div>
+                        {event.description && (
+                          <p className="text-sm mt-1">{event.description}</p>
+                        )}
                       </div>
-                      <Button variant="ghost" size="sm">
-                        View
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeEvent(event.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </div>
                   ))}

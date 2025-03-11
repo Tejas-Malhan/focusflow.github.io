@@ -11,6 +11,7 @@ export default function Focus() {
   const [isRunning, setIsRunning] = useState(false);
   const [time, setTime] = useState(25 * 60); // 25 minutes in seconds
   const [spotifyUrl, setSpotifyUrl] = useState("");
+  const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState("");
   const [showSpotifyInput, setShowSpotifyInput] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
@@ -62,6 +63,24 @@ export default function Focus() {
 
   const handleSpotifySubmit = () => {
     if (spotifyUrl.trim() && spotifyUrl.includes('spotify')) {
+      // Extract Spotify URI or ID
+      let embedUrl = spotifyUrl;
+      
+      // Handle different Spotify URL formats
+      if (spotifyUrl.includes('spotify.com')) {
+        // Convert regular URL to embed URL
+        embedUrl = spotifyUrl.replace('spotify.com', 'open.spotify.com/embed');
+        
+        // If it's already an embed URL, use it directly
+        if (!embedUrl.includes('/embed')) {
+          const urlParts = embedUrl.split('/');
+          const type = urlParts[urlParts.length - 2]; // playlist, album, track, etc.
+          const id = urlParts[urlParts.length - 1].split('?')[0]; // Remove query params
+          embedUrl = `https://open.spotify.com/embed/${type}/${id}`;
+        }
+      }
+      
+      setSpotifyEmbedUrl(embedUrl);
       toast.success("Spotify playlist connected");
       setShowSpotifyInput(false);
     } else {
@@ -151,11 +170,19 @@ export default function Focus() {
                 </div>
               ) : (
                 <div>
-                  {spotifyUrl ? (
+                  {spotifyEmbedUrl ? (
                     <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Playlist connected! Add an embed player here in production.
-                      </p>
+                      <div className="w-full h-80 overflow-hidden rounded-md">
+                        <iframe 
+                          src={spotifyEmbedUrl} 
+                          width="100%" 
+                          height="100%" 
+                          frameBorder="0" 
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                          loading="lazy"
+                          title="Spotify Player"
+                        ></iframe>
+                      </div>
                       <Button onClick={() => setShowSpotifyInput(true)}>
                         Change Playlist
                       </Button>
