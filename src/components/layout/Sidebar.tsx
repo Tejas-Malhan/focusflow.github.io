@@ -1,5 +1,5 @@
 
-import { Home, Clock, ListTodo, Calendar, Sun, Moon, User } from "lucide-react";
+import { Home, Clock, ListTodo, Calendar, Sun, Moon, User, Book } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -11,6 +11,7 @@ const navigation = [
   { name: "Focus", href: "/focus", icon: Clock },
   { name: "Tasks", href: "/tasks", icon: ListTodo },
   { name: "Calendar", href: "/calendar", icon: Calendar },
+  { name: "Journal", href: "/journal", icon: Book },
 ];
 
 export function Sidebar() {

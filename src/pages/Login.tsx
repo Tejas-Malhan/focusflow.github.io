@@ -76,8 +76,11 @@ export default function Login() {
       const idToken = response.credential;
       const userData = parseJwt(idToken);
       
-      // Use the login function from AuthContext
-      login(userData);
+      // Use the login function from AuthContext with google token
+      login({
+        ...userData,
+        googleToken: idToken // Store the token for Google Calendar access
+      });
       
       toast.success("Successfully logged in with Google!");
       navigate('/');

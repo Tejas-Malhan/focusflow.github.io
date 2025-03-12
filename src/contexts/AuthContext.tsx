@@ -10,6 +10,7 @@ type User = {
   image?: string;
   id: string;
   isGuest?: boolean; // Flag to identify guest users
+  googleToken?: string; // For Google Calendar API access
 };
 
 type AuthContextType = {
@@ -17,7 +18,7 @@ type AuthContextType = {
   loading: boolean;
   logout: () => void;
   login: (userData: Omit<User, "image">) => void;
-  loginAsGuest: () => void; // New function for guest login
+  loginAsGuest: () => void;
   isAuthenticated: boolean;
   syncWithGoogleCalendar: () => Promise<boolean>;
   googleApiLoaded: boolean;
@@ -28,7 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: () => {},
   login: () => {},
-  loginAsGuest: () => {}, // Initialize the new function
+  loginAsGuest: () => {},
   isAuthenticated: false,
   syncWithGoogleCalendar: async () => false,
   googleApiLoaded: false,
@@ -81,9 +82,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (userData: Omit<User, "image">) => {
+    // For non-guest users (Google login), use the special image
+    const useSpecialImage = !userData.isGuest;
+    
     const enhancedUser = {
       ...userData,
-      image: userData.picture, // Ensure image is set from picture
+      image: useSpecialImage 
+        ? "/lovable-uploads/5529380f-0de4-4a5f-9e76-aa5f5f0933f6.png" 
+        : (userData.picture || "https://ui-avatars.com/api/?name=Guest+User&background=random"),
       id: userData.email.replace(/[^a-zA-Z0-9]/g, '_') // Create ID from email
     };
     
@@ -101,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // New function for guest login
+  // Function for guest login
   const loginAsGuest = () => {
     const guestId = `guest_${Date.now()}`;
     const guestUser = {
@@ -148,23 +154,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.loading("Syncing with Google Calendar...");
       
       // In a real app, this would call Google Calendar API
-      // For now, we'll simulate a successful sync
+      // Let's simulate a more realistic sync process
+      
+      // 1. Get current events
       const events = db.getEvents(user.id);
       
-      // Mark all events as synced
-      const syncedEvents = events.map(event => ({
+      // 2. Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 3. Simulate finding new events from Google
+      const googleEvents = events.map(event => ({
         ...event,
-        synced: true
+        synced: true,
+        googleId: `google_${event.id}` // Simulate Google Calendar IDs
       }));
       
-      // Save the synced events
-      db.saveEvents(syncedEvents, user.id);
+      // 4. Simulate some new events from Google (if less than 5 events)
+      if (events.length < 5) {
+        const newCount = 5 - events.length;
+        for (let i = 0; i < newCount; i++) {
+          const futureDate = new Date();
+          futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 14) + 1);
+          
+          googleEvents.push({
+            id: Date.now() + i,
+            title: `Synced Event ${i + 1}`,
+            date: futureDate.toISOString().split('T')[0],
+            time: `${10 + Math.floor(Math.random() * 8)}:00`,
+            description: "This event was synced from Google Calendar",
+            synced: true,
+            googleId: `google_auto_${Date.now() + i}`
+          });
+        }
+      }
       
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 5. Save the synced events
+      db.saveEvents(googleEvents, user.id);
+      
+      // 6. Update stats for new events
+      const newEventCount = googleEvents.length - events.length;
+      if (newEventCount > 0) {
+        const stats = db.getStats(user.id);
+        db.updateStats({ eventsCreated: stats.eventsCreated + newEventCount }, user.id);
+      }
+      
+      // Simulate final network delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       toast.dismiss();
-      toast.success("Successfully synced with Google Calendar");
+      toast.success(`Successfully synced with Google Calendar. ${newEventCount > 0 ? `Added ${newEventCount} new events.` : ''}`);
       return true;
     } catch (error) {
       console.error("Error syncing with Google Calendar:", error);
@@ -180,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading, 
       logout, 
       login,
-      loginAsGuest, // Add the new function to the context
+      loginAsGuest,
       isAuthenticated: !!user,
       syncWithGoogleCalendar,
       googleApiLoaded

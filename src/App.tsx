@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Focus from "./pages/Focus";
 import Tasks from "./pages/Tasks";
 import Calendar from "./pages/Calendar";
+import Journal from "./pages/Journal";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
@@ -40,6 +41,7 @@ const AppRoutes = () => {
       <Route path="/focus" element={<ProtectedRoute><Focus /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+      <Route path="/journal" element={<ProtectedRoute><Journal /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

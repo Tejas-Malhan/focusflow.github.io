@@ -8,6 +8,14 @@ export interface Stats {
   eventsCreated: number;
 }
 
+export interface JournalEntry {
+  id: string;
+  date: string; // ISO format date string
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const db = {
   // User stats
   getStats: (userId?: string): Stats => {
@@ -58,5 +66,62 @@ export const db = {
     const sessionsKey = userId ? `focus_sessions_${userId}` : 'focus_sessions';
     const sessions = localStorage.getItem(sessionsKey);
     return sessions ? JSON.parse(sessions) : [];
+  },
+
+  // Journal entries
+  saveJournalEntry: (entry: JournalEntry, userId?: string) => {
+    const entries = db.getJournalEntries(userId);
+    const existingIndex = entries.findIndex(e => e.id === entry.id);
+    
+    if (existingIndex >= 0) {
+      entries[existingIndex] = entry;
+    } else {
+      entries.push(entry);
+    }
+    
+    const journalKey = userId ? `journal_entries_${userId}` : 'journal_entries';
+    localStorage.setItem(journalKey, JSON.stringify(entries));
+    return entry;
+  },
+
+  getJournalEntries: (userId?: string): JournalEntry[] => {
+    const journalKey = userId ? `journal_entries_${userId}` : 'journal_entries';
+    const entries = localStorage.getItem(journalKey);
+    return entries ? JSON.parse(entries) : [];
+  },
+
+  getJournalEntry: (date: string, userId?: string): JournalEntry | undefined => {
+    const entries = db.getJournalEntries(userId);
+    return entries.find(entry => entry.date === date);
+  },
+
+  // Get archived journal entries (entries from previous months)
+  getArchivedJournalEntries: (userId?: string): Record<string, JournalEntry[]> => {
+    const allEntries = db.getJournalEntries(userId);
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    
+    const archived: Record<string, JournalEntry[]> = {};
+    
+    allEntries.forEach(entry => {
+      const entryDate = new Date(entry.date);
+      const entryYear = entryDate.getFullYear();
+      const entryMonth = entryDate.getMonth();
+      
+      // Skip current month entries
+      if (entryYear === currentYear && entryMonth === currentMonth) {
+        return;
+      }
+      
+      const key = `${entryYear}-${String(entryMonth + 1).padStart(2, '0')}`;
+      if (!archived[key]) {
+        archived[key] = [];
+      }
+      
+      archived[key].push(entry);
+    });
+    
+    return archived;
   }
 };
