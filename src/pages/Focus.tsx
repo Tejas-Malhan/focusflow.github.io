@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +9,8 @@ import { db } from "@/lib/db";
 
 export default function Focus() {
   const [isRunning, setIsRunning] = useState(false);
-  const [time, setTime] = useState(25 * 60); // 25 minutes in seconds
+  const [customMinutes, setCustomMinutes] = useState(25);
+  const [time, setTime] = useState(customMinutes * 60);
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState("");
   const [showSpotifyInput, setShowSpotifyInput] = useState(false);
@@ -18,9 +18,15 @@ export default function Focus() {
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!isRunning) {
+      setTime(customMinutes * 60);
+    }
+  }, [customMinutes, isRunning]);
+
+  useEffect(() => {
     if (isRunning && time > 0) {
       if (startTimeRef.current === null) {
-        startTimeRef.current = Date.now(); // Record when we started this session
+        startTimeRef.current = Date.now();
       }
       
       intervalRef.current = window.setInterval(() => {
@@ -29,12 +35,11 @@ export default function Focus() {
             clearInterval(intervalRef.current!);
             setIsRunning(false);
             
-            // Calculate minutes spent and update stats
             const minutesSpent = Math.floor((Date.now() - startTimeRef.current!) / (1000 * 60));
             const stats = db.getStats();
             db.updateStats({ focusMinutes: stats.focusMinutes + minutesSpent });
             
-            startTimeRef.current = null; // Reset for next session
+            startTimeRef.current = null;
             toast.success("Focus session completed!");
             return 0;
           }
@@ -44,7 +49,6 @@ export default function Focus() {
     } else if (!isRunning && intervalRef.current) {
       clearInterval(intervalRef.current);
       
-      // If we stopped before completion, record partial time
       if (startTimeRef.current !== null) {
         const minutesSpent = Math.floor((Date.now() - startTimeRef.current) / (1000 * 60));
         if (minutesSpent > 0) {
@@ -71,7 +75,7 @@ export default function Focus() {
 
   const resetTimer = () => {
     setIsRunning(false);
-    setTime(25 * 60);
+    setTime(customMinutes * 60);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
@@ -86,29 +90,30 @@ export default function Focus() {
   };
 
   const handleSpotifySubmit = () => {
-    if (spotifyUrl.trim() && spotifyUrl.includes('spotify')) {
-      // Extract Spotify URI or ID
-      let embedUrl = spotifyUrl;
+    if (spotifyUrl.trim() === '') {
+      toast.error("Please enter a Spotify URL");
+      return;
+    }
+
+    try {
+      const url = new URL(spotifyUrl);
+      const pathParts = url.pathname.split('/').filter(part => part !== '');
       
-      // Handle different Spotify URL formats
-      if (spotifyUrl.includes('spotify.com')) {
-        // Convert regular URL to embed URL
-        embedUrl = spotifyUrl.replace('spotify.com', 'open.spotify.com/embed');
-        
-        // If it's already an embed URL, use it directly
-        if (!embedUrl.includes('/embed')) {
-          const urlParts = embedUrl.split('/');
-          const type = urlParts[urlParts.length - 2]; // playlist, album, track, etc.
-          const id = urlParts[urlParts.length - 1].split('?')[0]; // Remove query params
-          embedUrl = `https://open.spotify.com/embed/${type}/${id}`;
-        }
+      let embedUrl;
+      if (pathParts[0] === 'embed') {
+        embedUrl = spotifyUrl;
+      } else {
+        const type = pathParts[0];
+        const id = pathParts[1]?.split('?')[0];
+        if (!type || !id) throw new Error();
+        embedUrl = `https://open.spotify.com/embed/${type}/${id}`;
       }
-      
+
       setSpotifyEmbedUrl(embedUrl);
       toast.success("Spotify playlist connected");
       setShowSpotifyInput(false);
-    } else {
-      toast.error("Please enter a valid Spotify URL");
+    } catch (error) {
+      toast.error("Invalid Spotify URL. Please use a valid track, album, or playlist URL.");
     }
   };
 
@@ -124,8 +129,21 @@ export default function Focus() {
 
         <Card className="p-8 max-w-md mx-auto text-center">
           <div className="space-y-8">
-            <div className="text-6xl font-bold">
-              {formatTime(time)}
+            <div>
+              <div className="text-sm font-medium text-muted-foreground mb-2">
+                Session Duration (minutes)
+              </div>
+              <Input
+                type="number"
+                min="1"
+                value={customMinutes}
+                onChange={(e) => setCustomMinutes(Number(e.target.value))}
+                disabled={isRunning}
+                className="text-center mb-4"
+              />
+              <div className="text-6xl font-bold">
+                {formatTime(time)}
+              </div>
             </div>
             
             <div className="flex flex-col gap-4">
@@ -170,7 +188,7 @@ export default function Focus() {
             {showSpotifyInput ? (
               <div className="space-y-4">
                 <Input
-                  placeholder="Enter Spotify playlist URL"
+                  placeholder="Enter Spotify URL (track, album, or playlist)"
                   value={spotifyUrl}
                   onChange={(e) => setSpotifyUrl(e.target.value)}
                 />
