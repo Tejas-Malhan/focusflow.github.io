@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogIn, Calendar, AlertCircle } from "lucide-react";
+import { LogIn, Calendar, AlertCircle, User } from "lucide-react";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 declare global {
   interface Window {
@@ -14,7 +15,7 @@ declare global {
 }
 
 export default function Login() {
-  const { user, loading, login, googleApiLoaded } = useAuth();
+  const { user, loading, login, loginAsGuest, googleApiLoaded } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [googleErrorShown, setGoogleErrorShown] = useState(false);
@@ -78,7 +79,7 @@ export default function Login() {
       // Use the login function from AuthContext
       login(userData);
       
-      toast.success("Successfully logged in!");
+      toast.success("Successfully logged in with Google!");
       navigate('/');
     } catch (error) {
       toast.error("Authentication failed");
@@ -96,19 +97,11 @@ export default function Login() {
     }
   };
 
-  // Demo login for testing (when Google API is not available)
-  const handleDemoLogin = () => {
+  // Guest login handler
+  const handleGuestLogin = () => {
     setIsLoading(true);
     setTimeout(() => {
-      const demoUser = {
-        name: "Demo User",
-        email: "demo@example.com",
-        picture: "https://ui-avatars.com/api/?name=Demo+User&background=random",
-        id: "demo_user_123"
-      };
-      
-      login(demoUser);
-      toast.success("Logged in as Demo User");
+      loginAsGuest();
       navigate('/');
       setIsLoading(false);
     }, 1000);
@@ -136,24 +129,32 @@ export default function Login() {
                 <span className="font-medium">Google Sign-In not available</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Google Sign-In couldn't be loaded. You can try refreshing the page or use the demo login below.
+                Google Sign-In couldn't be loaded. You can still use guest login below.
               </p>
             </div>
           )}
           
-          {googleErrorShown && (
-            <Button 
-              className="w-full" 
-              onClick={handleDemoLogin} 
-              disabled={isLoading}
-            >
-              {isLoading ? "Logging in..." : "Demo Login"}
-            </Button>
-          )}
+          <Separator className="my-4">
+            <span className="px-2 text-xs text-muted-foreground">OR</span>
+          </Separator>
+          
+          <Button 
+            className="w-full" 
+            variant="outline"
+            onClick={handleGuestLogin} 
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging in..." : (
+              <>
+                <User className="mr-2 h-4 w-4" />
+                Continue as Guest
+              </>
+            )}
+          </Button>
           
           <p className="text-center text-sm text-muted-foreground">
-            By signing in, you'll be able to sync with Google Calendar
-            and save your progress across devices.
+            <strong>Note:</strong> Guest accounts have limited functionality.
+            Sign in with Google to sync with Google Calendar.
           </p>
         </div>
 

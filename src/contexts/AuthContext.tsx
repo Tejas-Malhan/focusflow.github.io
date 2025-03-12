@@ -8,7 +8,8 @@ type User = {
   email: string;
   picture: string;
   image?: string;
-  id: string; // Add unique ID for user identification
+  id: string;
+  isGuest?: boolean; // Flag to identify guest users
 };
 
 type AuthContextType = {
@@ -16,6 +17,7 @@ type AuthContextType = {
   loading: boolean;
   logout: () => void;
   login: (userData: Omit<User, "image">) => void;
+  loginAsGuest: () => void; // New function for guest login
   isAuthenticated: boolean;
   syncWithGoogleCalendar: () => Promise<boolean>;
   googleApiLoaded: boolean;
@@ -26,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: () => {},
   login: () => {},
+  loginAsGuest: () => {}, // Initialize the new function
   isAuthenticated: false,
   syncWithGoogleCalendar: async () => false,
   googleApiLoaded: false,
@@ -98,9 +101,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // New function for guest login
+  const loginAsGuest = () => {
+    const guestId = `guest_${Date.now()}`;
+    const guestUser = {
+      name: "Guest User",
+      email: `guest_${Date.now()}@example.com`,
+      picture: "https://ui-avatars.com/api/?name=Guest+User&background=random",
+      id: guestId,
+      isGuest: true
+    };
+    
+    localStorage.setItem("user", JSON.stringify(guestUser));
+    setUser(guestUser);
+    
+    // Initialize user stats for guest
+    const statsKey = `user_stats_${guestId}`;
+    localStorage.setItem(statsKey, JSON.stringify({ 
+      focusMinutes: 0, 
+      tasksCompleted: 0, 
+      eventsCreated: 0 
+    }));
+
+    toast.success("Logged in as Guest");
+  };
+
   const logout = () => {
     localStorage.removeItem("user");
     setUser(null);
+    toast.info("Logged out successfully");
   };
 
   // Function to sync with Google Calendar
@@ -110,7 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
     
+    if (user.isGuest) {
+      toast.error("Guest users cannot sync with Google Calendar. Please sign in with Google.");
+      return false;
+    }
+    
     try {
+      toast.loading("Syncing with Google Calendar...");
+      
       // In a real app, this would call Google Calendar API
       // For now, we'll simulate a successful sync
       const events = db.getEvents(user.id);
@@ -124,9 +160,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Save the synced events
       db.saveEvents(syncedEvents, user.id);
       
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast.dismiss();
+      toast.success("Successfully synced with Google Calendar");
       return true;
     } catch (error) {
       console.error("Error syncing with Google Calendar:", error);
+      toast.dismiss();
+      toast.error("Failed to sync with Google Calendar");
       return false;
     }
   };
@@ -137,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading, 
       logout, 
       login,
+      loginAsGuest, // Add the new function to the context
       isAuthenticated: !!user,
       syncWithGoogleCalendar,
       googleApiLoaded
