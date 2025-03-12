@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar as CalendarIcon, Plus, Trash2, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash2, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/db";
@@ -15,15 +15,17 @@ interface CalendarEvent {
   date: string;
   time?: string;
   description?: string;
+  synced?: boolean;
 }
 
 export default function Calendar() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [newEvent, setNewEvent] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [syncStatus, setSyncStatus] = useState("not_synced"); // "not_synced", "syncing", "synced"
 
   // Load events from database on component mount
   useEffect(() => {
@@ -45,7 +47,8 @@ export default function Calendar() {
         title: newEvent, 
         date: newDate,
         time: newTime || undefined,
-        description: newDescription || undefined
+        description: newDescription || undefined,
+        synced: false
       };
       
       const updatedEvents = [...events, event];
@@ -79,6 +82,23 @@ export default function Calendar() {
     toast.success("All events cleared");
   };
 
+  const simulateGoogleSync = () => {
+    setSyncStatus("syncing");
+    toast.info("Syncing with Google Calendar...");
+    
+    // Simulate sync delay
+    setTimeout(() => {
+      setEvents(prev => 
+        prev.map(event => ({
+          ...event,
+          synced: true
+        }))
+      );
+      setSyncStatus("synced");
+      toast.success("Synced with Google Calendar");
+    }, 2000);
+  };
+
   return (
     <Layout>
       <div className="space-y-8 animate-fade-up">
@@ -92,7 +112,19 @@ export default function Calendar() {
         <div className="space-y-6">
           <Card className="p-6">
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Add New Event</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Add New Event</h2>
+                <Button 
+                  variant="outline"
+                  onClick={simulateGoogleSync}
+                  disabled={syncStatus === "syncing" || events.length === 0}
+                  className="transition-all flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} />
+                  {syncStatus === "syncing" ? "Syncing..." : "Sync with Google"}
+                </Button>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   placeholder="Event title"
@@ -156,7 +188,14 @@ export default function Calendar() {
                     className="flex justify-between items-center p-4 border rounded-md group hover:bg-accent/50 transition-colors"
                   >
                     <div>
-                      <p className="font-medium">{event.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{event.title}</p>
+                        {event.synced && (
+                          <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-100">
+                            Synced
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarIcon className="h-3 w-3" />
                         <span>{event.date}</span>
@@ -184,6 +223,14 @@ export default function Calendar() {
               </div>
             )}
           </Card>
+
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+            <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">Google Calendar Integration</h3>
+            <p className="text-amber-700 dark:text-amber-400 text-sm">
+              For full Google Calendar integration, a Google Cloud project with Calendar API access is required. 
+              The "Sync with Google" button currently simulates this functionality for demonstration purposes.
+            </p>
+          </div>
         </div>
       </div>
     </Layout>

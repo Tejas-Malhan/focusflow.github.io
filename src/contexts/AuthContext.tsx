@@ -13,13 +13,15 @@ type AuthContextType = {
   loading: boolean;
   logout: () => void;
   isAuthenticated: boolean;
+  login: (userData: User) => void; // Added login function
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   logout: () => {},
-  isAuthenticated: false
+  isAuthenticated: false,
+  login: () => {} // Default empty function
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -50,6 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUserData();
   }, []);
 
+  const login = (userData: User) => {
+    // Ensure we have an image property for compatibility
+    if (userData.picture && !userData.image) {
+      userData.image = userData.picture;
+    }
+    
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
   const logout = () => {
     localStorage.removeItem("user");
     setUser(null);
@@ -57,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, loading, logout, isAuthenticated, login }}>
       {children}
     </AuthContext.Provider>
   );
