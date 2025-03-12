@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogIn, Calendar } from "lucide-react";
+import { LogIn, Calendar, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -14,9 +14,10 @@ declare global {
 }
 
 export default function Login() {
-  const { user, loading } = useAuth();
+  const { user, loading, login, googleApiLoaded } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [googleErrorShown, setGoogleErrorShown] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,42 +31,53 @@ export default function Login() {
     if (loading || !googleButtonRef.current) return;
     
     // Check if the Google API is loaded
-    if (typeof window.google === 'undefined') {
-      console.warn('Google API not available');
-      return;
-    }
+    if (googleApiLoaded) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: "1022190958510-l4m2ikl300j7otqgc00nb89fr4hq6p0d.apps.googleusercontent.com",
+          callback: handleCredentialResponse,
+          auto_select: false,
+        });
 
-    try {
-      window.google.accounts.id.initialize({
-        client_id: "1022190958510-l4m2ikl300j7otqgc00nb89fr4hq6p0d.apps.googleusercontent.com",
-        callback: handleCredentialResponse,
-        auto_select: false,
-      });
-
-      window.google.accounts.id.renderButton(
-        googleButtonRef.current,
-        { 
-          type: "standard",
-          theme: "outline",
-          size: "large",
-          width: "400",
-          text: "signin_with",
+        window.google.accounts.id.renderButton(
+          googleButtonRef.current,
+          { 
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            width: "400",
+            text: "signin_with",
+          }
+        );
+        
+        // Reset error state if Google API loads
+        setGoogleErrorShown(false);
+      } catch (error) {
+        console.error('Error initializing Google Sign-In:', error);
+        if (!googleErrorShown) {
+          setGoogleErrorShown(true);
         }
-      );
-    } catch (error) {
-      console.error('Error initializing Google Sign-In:', error);
+      }
+    } else if (!googleErrorShown) {
+      // Show error message if Google API isn't available after 3 seconds
+      setTimeout(() => {
+        if (!googleApiLoaded && !googleErrorShown) {
+          setGoogleErrorShown(true);
+        }
+      }, 3000);
     }
-  }, [loading]); // Only re-run when loading changes
+  }, [loading, googleApiLoaded, googleErrorShown]); 
 
   const handleCredentialResponse = (response: any) => {
     setIsLoading(true);
     try {
-      // Verify the ID token here (you need a minimal backend for this)
+      // In a real app, verify the ID token on your backend
       const idToken = response.credential;
-      
-      // For demo purposes only - in production, send to your backend for validation
       const userData = parseJwt(idToken);
-      localStorage.setItem("user", JSON.stringify(userData));
+      
+      // Use the login function from AuthContext
+      login(userData);
+      
       toast.success("Successfully logged in!");
       navigate('/');
     } catch (error) {
@@ -84,6 +96,24 @@ export default function Login() {
     }
   };
 
+  // Demo login for testing (when Google API is not available)
+  const handleDemoLogin = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      const demoUser = {
+        name: "Demo User",
+        email: "demo@example.com",
+        picture: "https://ui-avatars.com/api/?name=Demo+User&background=random",
+        id: "demo_user_123"
+      };
+      
+      login(demoUser);
+      toast.success("Logged in as Demo User");
+      navigate('/');
+      setIsLoading(false);
+    }, 1000);
+  };
+
   if (loading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
@@ -98,6 +128,28 @@ export default function Login() {
 
         <div className="space-y-4">
           <div ref={googleButtonRef} className="w-full flex justify-center"></div>
+          
+          {googleErrorShown && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-md border border-yellow-200 dark:border-yellow-800 text-sm">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <span className="font-medium">Google Sign-In not available</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Google Sign-In couldn't be loaded. You can try refreshing the page or use the demo login below.
+              </p>
+            </div>
+          )}
+          
+          {googleErrorShown && (
+            <Button 
+              className="w-full" 
+              onClick={handleDemoLogin} 
+              disabled={isLoading}
+            >
+              {isLoading ? "Logging in..." : "Demo Login"}
+            </Button>
+          )}
           
           <p className="text-center text-sm text-muted-foreground">
             By signing in, you'll be able to sync with Google Calendar

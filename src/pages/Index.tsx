@@ -12,14 +12,16 @@ export default function Index() {
   const [events, setEvents] = useState<any[]>([]);
 
   useEffect(() => {
-    // Load stats from database
-    const currentStats = db.getStats();
-    setStats(currentStats);
-    
-    // Load other data to display on overview
-    setTasks(db.getTasks());
-    setEvents(db.getEvents());
-  }, []);
+    if (user) {
+      // Load stats from database for this specific user
+      const currentStats = db.getStats(user.id);
+      setStats(currentStats);
+      
+      // Load other data to display on overview for this user
+      setTasks(db.getTasks(user.id));
+      setEvents(db.getEvents(user.id));
+    }
+  }, [user]);
 
   // Calculate today's focus time, tasks, and events
   const todayFocusTime = Math.min(150, stats.focusMinutes); // Mock today's value (capped for UI)
@@ -78,20 +80,24 @@ export default function Index() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="p-6">
             <h3 className="font-semibold mb-4">Lifetime Statistics</h3>
-            <ul className="space-y-2">
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Total focus time:</span>
-                <span className="font-medium">{formatFocusTime(stats.focusMinutes)}</span>
-              </li>
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Tasks completed:</span>
-                <span className="font-medium">{stats.tasksCompleted}</span>
-              </li>
-              <li className="flex justify-between">
-                <span className="text-muted-foreground">Events created:</span>
-                <span className="font-medium">{stats.eventsCreated}</span>
-              </li>
-            </ul>
+            {user ? (
+              <ul className="space-y-2">
+                <li className="flex justify-between">
+                  <span className="text-muted-foreground">Total focus time:</span>
+                  <span className="font-medium">{formatFocusTime(stats.focusMinutes)}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-muted-foreground">Tasks completed:</span>
+                  <span className="font-medium">{stats.tasksCompleted}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-muted-foreground">Events created:</span>
+                  <span className="font-medium">{stats.eventsCreated}</span>
+                </li>
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">Sign in to view your statistics</p>
+            )}
           </Card>
           
           <Card className="p-6">

@@ -5,15 +5,29 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, Clock, CheckSquare, CalendarDays } from "lucide-react";
 import { db } from "@/lib/db";
+import { useEffect, useState } from "react";
 
 export default function Profile() {
   const { user, logout } = useAuth();
-  const stats = db.getStats();
+  const [stats, setStats] = useState({
+    focusMinutes: 0,
+    tasksCompleted: 0,
+    eventsCreated: 0
+  });
+  
+  useEffect(() => {
+    if (user) {
+      // Load stats specific to this user
+      const userStats = db.getStats(user.id);
+      setStats(userStats);
+    }
+  }, [user]);
   
   // Helper function to get profile image
   const getProfileImage = () => {
-    if (user?.image) return user.image;
-    if (user?.picture) return user.picture;
+    if (!user) return null;
+    if (user.image) return user.image;
+    if (user.picture) return user.picture;
     return null;
   }
 

@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar as CalendarIcon, Plus, Trash2, Clock, RefreshCw } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash2, Clock, RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/db";
@@ -19,7 +19,7 @@ interface CalendarEvent {
 }
 
 export default function Calendar() {
-  const { isAuthenticated, user } = useAuth();
+  const { user, syncWithGoogleCalendar, googleApiLoaded } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [newEvent, setNewEvent] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -29,16 +29,20 @@ export default function Calendar() {
 
   // Load events from database on component mount
   useEffect(() => {
-    const savedEvents = db.getEvents();
-    if (savedEvents.length) {
-      setEvents(savedEvents);
+    if (user) {
+      const savedEvents = db.getEvents(user.id);
+      if (savedEvents.length) {
+        setEvents(savedEvents);
+      }
     }
-  }, []);
+  }, [user]);
 
   // Save events to database whenever events change
   useEffect(() => {
-    db.saveEvents(events);
-  }, [events]);
+    if (user && events.length > 0) {
+      db.saveEvents(events, user.id);
+    }
+  }, [events, user]);
 
   const addEvent = () => {
     if (newEvent.trim() && newDate.trim()) {
@@ -55,8 +59,10 @@ export default function Calendar() {
       setEvents(updatedEvents);
       
       // Update stats
-      const stats = db.getStats();
-      db.updateStats({ eventsCreated: stats.eventsCreated + 1 });
+      if (user) {
+        const stats = db.getStats(user.id);
+        db.updateStats({ eventsCreated: stats.eventsCreated + 1 }, user.id);
+      }
       
       setNewEvent("");
       setNewDate("");
@@ -82,21 +88,31 @@ export default function Calendar() {
     toast.success("All events cleared");
   };
 
-  const simulateGoogleSync = () => {
+  const handleGoogleSync = async () => {
     setSyncStatus("syncing");
     toast.info("Syncing with Google Calendar...");
     
-    // Simulate sync delay
-    setTimeout(() => {
-      setEvents(prev => 
-        prev.map(event => ({
-          ...event,
-          synced: true
-        }))
-      );
-      setSyncStatus("synced");
-      toast.success("Synced with Google Calendar");
-    }, 2000);
+    try {
+      // Call the syncWithGoogleCalendar function from AuthContext
+      const success = await syncWithGoogleCalendar();
+      
+      if (success) {
+        // Refresh events to show synced status
+        if (user) {
+          const updatedEvents = db.getEvents(user.id);
+          setEvents(updatedEvents);
+          setSyncStatus("synced");
+          toast.success("Synced with Google Calendar");
+        }
+      } else {
+        setSyncStatus("not_synced");
+        toast.error("Failed to sync with Google Calendar");
+      }
+    } catch (error) {
+      console.error("Error syncing:", error);
+      setSyncStatus("not_synced");
+      toast.error("An error occurred while syncing");
+    }
   };
 
   return (
@@ -116,8 +132,8 @@ export default function Calendar() {
                 <h2 className="text-xl font-semibold">Add New Event</h2>
                 <Button 
                   variant="outline"
-                  onClick={simulateGoogleSync}
-                  disabled={syncStatus === "syncing" || events.length === 0}
+                  onClick={handleGoogleSync}
+                  disabled={syncStatus === "syncing" || events.length === 0 || !googleApiLoaded}
                   className="transition-all flex items-center gap-2"
                 >
                   <RefreshCw className={`h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} />
@@ -224,13 +240,27 @@ export default function Calendar() {
             )}
           </Card>
 
-          <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-            <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">Google Calendar Integration</h3>
-            <p className="text-amber-700 dark:text-amber-400 text-sm">
-              For full Google Calendar integration, a Google Cloud project with Calendar API access is required. 
-              The "Sync with Google" button currently simulates this functionality for demonstration purposes.
-            </p>
-          </div>
+          {!googleApiLoaded && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center space-x-2 mb-2">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <h3 className="font-semibold text-amber-800 dark:text-amber-300">Google Calendar API Not Available</h3>
+              </div>
+              <p className="text-amber-700 dark:text-amber-400 text-sm">
+                The Google Calendar API couldn't be loaded. The "Sync with Google" button currently simulates this functionality for demonstration purposes.
+              </p>
+            </div>
+          )}
+
+          {googleApiLoaded && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+              <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">Google Calendar Integration</h3>
+              <p className="text-amber-700 dark:text-amber-400 text-sm">
+                For full Google Calendar integration, a Google Cloud project with Calendar API access is required. 
+                The "Sync with Google" button currently simulates this functionality for demonstration purposes.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
