@@ -9,6 +9,13 @@ import { db } from "@/lib/db";
 export default function Profile() {
   const { user, logout } = useAuth();
   const stats = db.getStats();
+  
+  // Helper function to get profile image
+  const getProfileImage = () => {
+    if (user?.image) return user.image;
+    if (user?.picture) return user.picture;
+    return null;
+  }
 
   return (
     <Layout>
@@ -27,15 +34,15 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center space-x-4">
-                {user?.image ? (
+                {getProfileImage() ? (
                   <img 
-                    src={user.image} 
-                    alt={user.name} 
+                    src={getProfileImage()} 
+                    alt={user?.name} 
                     className="h-16 w-16 rounded-full border-2 border-border"
                   />
                 ) : (
                   <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-xl font-semibold">{user?.name.charAt(0)}</span>
+                    <span className="text-xl font-semibold">{user?.name?.charAt(0)}</span>
                   </div>
                 )}
                 

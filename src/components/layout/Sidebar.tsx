@@ -17,6 +17,13 @@ export function Sidebar() {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  
+  // Helper function to get profile image
+  const getProfileImage = () => {
+    if (user?.image) return user.image;
+    if (user?.picture) return user.picture;
+    return null;
+  }
 
   return (
     <div className="flex h-screen fixed w-64 flex-col gap-y-5 border-r bg-card px-6 transition-colors">
@@ -78,10 +85,10 @@ export function Sidebar() {
                 "group flex items-center gap-x-3 rounded-md p-2 text-sm leading-6 transition-colors"
               )}
             >
-              {user?.image ? (
+              {getProfileImage() ? (
                 <img
-                  src={user.image}
-                  alt={user.name}
+                  src={getProfileImage()}
+                  alt={user?.name}
                   className="h-6 w-6 rounded-full"
                 />
               ) : (

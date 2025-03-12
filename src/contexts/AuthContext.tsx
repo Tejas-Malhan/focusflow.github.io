@@ -5,6 +5,7 @@ type User = {
   name: string;
   email: string;
   picture: string;
+  image?: string; // Add image as an optional property for compatibility
 };
 
 type AuthContextType = {
@@ -32,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = localStorage.getItem("user");
         if (userData) {
           const parsedUser = JSON.parse(userData);
+          // Ensure compatibility by copying picture to image if needed
+          if (parsedUser.picture && !parsedUser.image) {
+            parsedUser.image = parsedUser.picture;
+          }
           setUser(parsedUser);
           setIsAuthenticated(true);
         }
