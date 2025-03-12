@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -25,25 +26,36 @@ export default function Login() {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (typeof window.google === 'undefined' || !googleButtonRef.current) return;
+    // Don't attempt to render Google button if loading or no ref
+    if (loading || !googleButtonRef.current) return;
+    
+    // Check if the Google API is loaded
+    if (typeof window.google === 'undefined') {
+      console.warn('Google API not available');
+      return;
+    }
 
-    window.google.accounts.id.initialize({
-      client_id: "1022190958510-l4m2ikl300j7otqgc00nb89fr4hq6p0d.apps.googleusercontent.com", // Get from Google Cloud Console
-      callback: handleCredentialResponse,
-      auto_select: false,
-    });
+    try {
+      window.google.accounts.id.initialize({
+        client_id: "1022190958510-l4m2ikl300j7otqgc00nb89fr4hq6p0d.apps.googleusercontent.com",
+        callback: handleCredentialResponse,
+        auto_select: false,
+      });
 
-    window.google.accounts.id.renderButton(
-      googleButtonRef.current,
-      { 
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        width: "400",
-        text: "signin_with",
-      }
-    );
-  }, []);
+      window.google.accounts.id.renderButton(
+        googleButtonRef.current,
+        { 
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          width: "400",
+          text: "signin_with",
+        }
+      );
+    } catch (error) {
+      console.error('Error initializing Google Sign-In:', error);
+    }
+  }, [loading]); // Only re-run when loading changes
 
   const handleCredentialResponse = (response: any) => {
     setIsLoading(true);
@@ -73,7 +85,7 @@ export default function Login() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
   return (
