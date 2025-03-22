@@ -29,7 +29,7 @@ export function Sidebar() {
   return (
     <div className="flex h-screen fixed w-64 flex-col gap-y-5 border-r bg-card px-6 transition-colors">
       <div className="flex h-16 shrink-0 items-center">
-        <span className="text-xl font-semibold">TaskTide</span>
+        <span className="text-xl font-semibold">FocusFlow</span>
       </div>
       <nav className="flex flex-1 flex-col">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
